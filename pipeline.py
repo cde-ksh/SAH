@@ -20,9 +20,10 @@ from features.school_extractor import extract_school_marks
 # 4. Scoring Engine
 from scoring.final_score import compute_final_score
 
+
 def infer_profession(text: str) -> str:
     """
-    A lightweight heuristic classifier. 
+    A lightweight heuristic classifier.
     Specific/Niche technical roles are placed at the TOP to prevent keyword shadowing.
     Added 'natural language processing' and standalone 'prompt' to bypass OCR font errors (AI vs Al).
     """
@@ -33,8 +34,12 @@ def infer_profession(text: str) -> str:
         return "Cybersecurity"
     elif "physician" in text_lower or "medical" in text_lower or "doctor" in text_lower:
         return "Medical / Healthcare"
-    # UPDATED LINE: Added 'natural language processing' and standalone 'prompt'
-    elif "prompt" in text_lower or "artificial intelligence" in text_lower or "natural language processing" in text_lower or "machine learning" in text_lower:
+    elif (
+        "prompt" in text_lower
+        or "artificial intelligence" in text_lower
+        or "natural language processing" in text_lower
+        or "machine learning" in text_lower
+    ):
         return "AI & Machine Learning"
     elif "developer" in text_lower or "software" in text_lower or "engineer" in text_lower:
         return "Software Engineering"
@@ -51,9 +56,10 @@ def infer_profession(text: str) -> str:
     else:
         return "General / Uncategorized"
 
+
 def process_resume(pdf_path: str, custom_weights: dict = None) -> dict:
     """
-    The master orchestrator. 
+    The master orchestrator.
     Takes a PDF path, runs the entire deterministic pipeline, and returns the final score.
     """
     try:
@@ -80,7 +86,7 @@ def process_resume(pdf_path: str, custom_weights: dict = None) -> dict:
             "school": extract_school_marks(sections)
         }
         
-        # PASS CUSTOM WEIGHTS TO SCORING ENGINE
+        # Pass custom weights to scoring engine
         score_data = compute_final_score(features, custom_weights)
         
         # Inject the inferred profession for the UI dashboard
@@ -89,7 +95,7 @@ def process_resume(pdf_path: str, custom_weights: dict = None) -> dict:
         score_data["status"] = "success"
         score_data["fraud_flags"] = fraud_flags
         
-        # --- UPDATED FRAUD CHECK: Checks for both invisible AND microscopic text ---
+        # Updated fraud check: checks for both invisible AND microscopic text
         if "invisible_text" in fraud_flags or "microscopic_text" in fraud_flags:
             score_data["breakdown"]["WARNING"] = "Hidden/Microscopic text detected and ignored. Please remove this."
             score_data["status"] = "WARNING_ISSUED"

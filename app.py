@@ -5,7 +5,7 @@ import tempfile
 
 from pipeline import process_resume
 
-st.set_page_config(page_title="Deterministic ATS Leaderboard", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="Deterministic ATS Leaderboard", layout="wide", page_icon=None)
 
 st.title("Automated Resume Extraction & Ranking Engine")
 st.markdown("### Deterministic scoring. Explainable AI. Zero bias.")
@@ -46,7 +46,7 @@ custom_weights = {
 # --- THE ARCHITECT'S NORMALIZATION ---
 total_raw_weight = sum(custom_weights.values())
 if total_raw_weight == 0:
-    total_raw_weight = 1 # Prevent division by zero
+    total_raw_weight = 1  # Prevent division by zero
 
 # Mathematically force the weights to exactly 100%
 normalized_weights = {k: (v / total_raw_weight) * 100 for k, v in custom_weights.items()}
@@ -78,12 +78,10 @@ if uploaded_files:
                     is_fraud = "invisible_text" in score_data.get("fraud_flags", [])
                     
                     if is_fraud:
-                        status_label = "⚠️ FRAUD (Hidden Text)"
+                        status_label = "FRAUD (Hidden Text)"
                     else:
                         status_label = "Fresher" if score_data.get("fresher") else "Experienced"
                     
-                    # NOTE: Ensure process_resume returns a "domain" or "profession" key. 
-                    # If it doesn't, this safely defaults to "General/Unknown".
                     profession = score_data.get("profession", score_data.get("domain", "General/Unknown"))
                     
                     results.append({
@@ -107,7 +105,7 @@ if uploaded_files:
 
                 # --- EXECUTIVE KPI DASHBOARD ---
                 st.markdown("---")
-                st.markdown("### 📊 Executive Overview")
+                st.markdown("### Executive Overview")
                 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
                 
                 kpi1.metric("Candidates Processed", len(df))
@@ -124,7 +122,7 @@ if uploaded_files:
                 with col_filter:
                     available_professions = sorted(df["Profession"].unique())
                     selected_professions = st.multiselect(
-                        "🔍 Filter by Profession:", 
+                        "Filter by Profession:", 
                         options=available_professions, 
                         default=available_professions
                     )
@@ -132,7 +130,7 @@ if uploaded_files:
                 filtered_df = df[df["Profession"].isin(selected_professions)]
 
                 # --- TABBED INTERFACE ---
-                tab1, tab2 = st.tabs(["🏆 Candidate Leaderboard", "🚨 Fraud Audit Log"])
+                tab1, tab2 = st.tabs(["Candidate Leaderboard", "Fraud Audit Log"])
                 
                 with tab1:
                     st.dataframe(
@@ -149,12 +147,12 @@ if uploaded_files:
                         use_container_width=True
                     )
                     
-                    st.subheader("🔍 Explainability & Score Breakdown")
+                    st.subheader("Explainability & Score Breakdown")
                     for idx, row in filtered_df.iterrows():
                         with st.expander(f"[{row['Profession']}] {row['Candidate']} - Score: {row['Score']:.2f}"):
                             
                             if "FRAUD" in row['Status']:
-                                st.error("🚨 System intercepted ATS manipulation. Score actively penalized.")
+                                st.error("System intercepted ATS manipulation. Score actively penalized.")
                             
                             col1, col2, col3 = st.columns(3)
                             exp_score = row['Raw Breakdown'].get('experience', 0)
@@ -174,7 +172,7 @@ if uploaded_files:
                                 st.bar_chart(chart_data)
                 
                 with tab2:
-                    st.markdown("### 🛡️ System Defense Log")
+                    st.markdown("### System Defense Log")
                     fraud_df = df[df['Status'].str.contains("FRAUD")]
                     if not fraud_df.empty:
                         st.warning(f"Intercepted {len(fraud_df)} candidate(s) attempting to manipulate the parser using hidden text or microscopic fonts.")
