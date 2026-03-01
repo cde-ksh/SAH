@@ -20,7 +20,36 @@ from features.school_extractor import extract_school_marks
 # 4. Scoring Engine
 from scoring.final_score import compute_final_score
 
-# In pipeline.py
+def infer_profession(text: str) -> str:
+    """
+    A lightweight heuristic classifier. 
+    Specific/Niche technical roles are placed at the TOP to prevent keyword shadowing.
+    Added 'natural language processing' and standalone 'prompt' to bypass OCR font errors (AI vs Al).
+    """
+    text_lower = text.lower()
+    
+    # 1. Most Specific / Technical Roles First
+    if "cybersecurity" in text_lower or "security analyst" in text_lower:
+        return "Cybersecurity"
+    elif "physician" in text_lower or "medical" in text_lower or "doctor" in text_lower:
+        return "Medical / Healthcare"
+    # UPDATED LINE: Added 'natural language processing' and standalone 'prompt'
+    elif "prompt" in text_lower or "artificial intelligence" in text_lower or "natural language processing" in text_lower or "machine learning" in text_lower:
+        return "AI & Machine Learning"
+    elif "developer" in text_lower or "software" in text_lower or "engineer" in text_lower:
+        return "Software Engineering"
+        
+    # 2. Broader Roles Second
+    elif "design" in text_lower or "layout" in text_lower or "creative" in text_lower or "graphic" in text_lower:
+        return "Design & Creative"
+    elif "marketing" in text_lower or "sales" in text_lower or "seo" in text_lower:
+        return "Marketing & Sales"
+    elif "manager" in text_lower or "management" in text_lower:
+        return "Business / Management"
+        
+    # 3. Fallback
+    else:
+        return "General / Uncategorized"
 
 def process_resume(pdf_path: str, custom_weights: dict = None) -> dict:
     """
@@ -52,8 +81,10 @@ def process_resume(pdf_path: str, custom_weights: dict = None) -> dict:
         }
         
         # PASS CUSTOM WEIGHTS TO SCORING ENGINE
-        # PASS CUSTOM WEIGHTS TO SCORING ENGINE
         score_data = compute_final_score(features, custom_weights)
+        
+        # Inject the inferred profession for the UI dashboard
+        score_data["profession"] = infer_profession(cleaned_text)
         
         score_data["status"] = "success"
         score_data["fraud_flags"] = fraud_flags
@@ -74,5 +105,6 @@ def process_resume(pdf_path: str, custom_weights: dict = None) -> dict:
             "breakdown": {},
             "fresher": True,
             "completeness": 0,
-            "fraud_flags": []
+            "fraud_flags": [],
+            "profession": "Error Processing"
         }

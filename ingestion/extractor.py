@@ -11,42 +11,63 @@ def extract_fitz_advanced(path):
     Architect-level extraction using PyMuPDF.
     1. Uses 'dict' extraction to access spatial blocks and font metadata.
     2. Sorts blocks to naturally handle 2-column layouts without shredding reading order.
-    3. Detects invisible/white text used for ATS gaming.
+    3. Uses a Two-Pass Statistical Algorithm to detect Dark-Mode resumes vs ATS gaming (invisible text).
     """
     text = ""
     fraud_flags = []
     
     try:
         doc = fitz.open(path)
+        
+        # --- PASS 1: CONTEXTUAL COLOR DISTRIBUTION ---
+        # We quickly scan the document to see if it's a "Dark Mode" resume or has heavy dark UI elements.
+        white_char_count = 0
+        total_char_count = 0
+        
         for page in doc:
-            # get_text("dict", sort=True) automatically orders blocks top-to-bottom, left-to-right.
-            # This fundamentally solves the two-column resume parsing bug.
+            page_data = page.get_text("dict", sort=True)
+            for block in page_data.get("blocks", []):
+                # Type 0 is text. Ignore images.
+                if block.get("type") != 0:
+                    continue
+                for line in block.get("lines", []):
+                    for span in line.get("spans", []):
+                        chars = len(span.get("text", "").strip())
+                        total_char_count += chars
+                        # Color 16777215 is 0xFFFFFF (Pure White)
+                        if span.get("color") == 16777215:
+                            white_char_count += chars
+                            
+        # If more than 15% of the text is white, it's a dark-mode/heavy-design resume, not a fraudster.
+        is_dark_mode = False
+        if total_char_count > 0 and (white_char_count / total_char_count) > 0.15:
+            is_dark_mode = True
+
+        # --- PASS 2: ACTUAL EXTRACTION & FRAUD DEFENSE ---
+        for page in doc:
             page_data = page.get_text("dict", sort=True)
             
             for block in page_data.get("blocks", []):
-                # Type 0 is text. Ignore images (Type 1) to save processing time.
                 if block.get("type") != 0:
                     continue
                 
                 block_text = ""
                 for line in block.get("lines", []):
                     for span in line.get("spans", []):
-                        # --- FRAUD DETECTION ---
-                        # Color 16777215 is 0xFFFFFF (White). 
-                        # If a candidate puts white text on a white PDF, they are gaming the ATS.
-                        # We flag it, but don't add the text to our parsing engine.
-                        # --- FRAUD DETECTION ---
-                        # 1. White Text Check
-                        if span.get("color") == 16777215:
+                        
+                        # 1. Context-Aware White Text Check
+                        # Only flag as invisible text IF the document is NOT a dark-mode resume.
+                        if span.get("color") == 16777215 and not is_dark_mode:
                             if "invisible_text" not in fraud_flags:
                                 fraud_flags.append("invisible_text")
-                            continue # Skip adding this text
+                            continue # Skip adding this cheating text
                             
                         # 2. Microscopic Text Check (Font size < 4 is unreadable to humans)
+                        # We always run this, because even dark-mode resumes shouldn't have size 1 font.
                         if span.get("size", 10) < 4.0:
                             if "microscopic_text" not in fraud_flags:
                                 fraud_flags.append("microscopic_text")
-                            continue # Skip adding this text
+                            continue # Skip adding this cheating text
                         
                         block_text += span.get("text", "") + " "
                     block_text += "\n"
